@@ -19,8 +19,7 @@
 
 #include "ObjectLoader.h"
 
-class Particle {
-public:
+struct Particle {
     float age, oldest;
     glm::vec3 position;
     glm::vec3 speed;
@@ -31,7 +30,7 @@ public:
 
 class ParticleGenerator {
 public:
-    ParticleGenerator(int N);
+    ParticleGenerator(int N, const glm::vec3& source, const glm::vec3& normal);
     ~ParticleGenerator();
 
     void Update(float deltaTime);
@@ -39,6 +38,7 @@ public:
     void RespawnParticle(Particle& particle);
     int getParticleCount();
     Particle& getParticle(int i);
+    void setSource(glm::vec3 source);
 
 private:
     int N;
@@ -46,6 +46,9 @@ private:
     std::default_random_engine randomEngine;
     std::uniform_real_distribution<float> randomDist;
     glm::vec3 source;
+    glm::vec3 normal;
+    float visibility = 0.8f;
+    float pointSize = 5.0f;
 };
 
 #endif //INC_RACANI_PARTICLE_H

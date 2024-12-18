@@ -17,13 +17,18 @@
 
 using namespace std;
 
+struct Vertex {
+    glm::vec3 position;
+    glm::vec3 normal;
+};
+
 struct Face {
     int vertexIndex[3];
 };
 
 class ObjectLoader {
 public:
-    vector<glm::vec3> vertices;
+    vector<Vertex> vertices;
     vector<Face> faces;
     float minX, maxX, minY, maxY, minZ, maxZ;
     glm::vec3 center;
@@ -32,8 +37,10 @@ public:
 
     void load(const string& filename);
     void normalize(float scale);
+    void calculateNormals();
     void draw();
     void translate(glm::mat4x4 translation);
+    vector<Vertex> getVertices();
 
 };
 

@@ -1,13 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string>
 #include <GL/glut.h>
 
 #include "Particle.h"
+#include "ObjectLoader.h"
 
 
-ParticleGenerator* particleGenerator;
-float deltaTime = 0.016f;
+std::vector<ParticleGenerator*> particleGenerators;
+//ParticleGenerator* particleGenerator;
+float delta = 0.0016f;
+float passedTime = 0.0f;
+ObjectLoader obj;
 
 GLuint width = 600, height = 600;
 int kut = 0;
@@ -28,6 +33,8 @@ void myRenderScene();
 void idle();
 void myKeyboard(unsigned char theKey, int mouseX, int mouseY);
 
+bool checkParticlesInside(ParticleGenerator* generator, ObjectLoader& obj);
+
 int main(int argc, char **argv)
 {
 
@@ -45,13 +52,29 @@ int main(int argc, char **argv)
     printf("Tipka: r - pocetno stanje\n");
     printf("esc: izlaz iz programa\n");
 
-    particleGenerator = new ParticleGenerator(10);
+    //particleGenerator = new ParticleGenerator(100);
+
+    obj.load(argv[1]);
+    obj.normalize(0.1f);
+
+    int i = 0;
+    for (const auto& vertex : obj.getVertices()) {
+        ParticleGenerator* generator = new ParticleGenerator(100, vertex.position, vertex.normal);
+        particleGenerators.push_back(generator);
+        i++;
+        //if (i > 3) break;
+    }
 
     lastTime = std::chrono::high_resolution_clock::now();
 
     glutMainLoop();
 
-    delete particleGenerator;
+    //delete particleGenerator;
+
+    for (auto generator : particleGenerators) {
+        delete generator;
+    }
+
     return 0;
 }
 
@@ -80,7 +103,13 @@ void myReshape(int w, int h)
 void myRenderScene()
 {
     glPushMatrix();
-    particleGenerator->Render();
+
+    obj.draw();
+
+    //particleGenerator->Render();
+    for (auto generator : particleGenerators) {
+        generator->Render();
+    }
     glPopMatrix();
 }
 
@@ -96,7 +125,7 @@ void myKeyboard(unsigned char theKey, int mouseX, int mouseY)
             break;
         case 's': ociste.y = ociste.y - 0.2f;
             break;
-        case 'r': ociste.x = 0.0; ociste.y = 0.0, ociste.z = 0.0;
+        case 'r': ociste.x = 0.0; ociste.y = 0.0, ociste.z = 2.0;
             break;
         case 'q': ociste.z = ociste.z+0.2f;
             break;
@@ -115,74 +144,45 @@ void idle() {
     std::chrono::duration<float> deltaTime = currentTime - lastTime;
     lastTime = currentTime;
 
-    if (particleGenerator) {
-        particleGenerator->Update(deltaTime.count());
+    passedTime += deltaTime.count();
+    if (passedTime >= delta) {
+        passedTime = 0.0f;
+        //particleGenerator->Update(deltaTime.count());
+        for (auto generator : particleGenerators) {
+            generator->Update(deltaTime.count());
+            /*if (checkParticlesInside(generator, obj)) {
+                std::cout << "Particle inside object!" << std::endl;
+            }*/
+        }
     }
 
     glutPostRedisplay();
 }
 
+bool isParticleInside(const Particle& particle, const glm::vec3& vertex, const glm::vec3& normal) {
+    // Compute the vector from the vertex to the particle position
+    glm::vec3 toParticle = particle.position - vertex;
 
-/**#include <GL/glut.h>
-#include <iostream>
+    // Dot product between the vector to the particle and the vertex normal
+    float dotProduct = glm::dot(toParticle, normal);
 
-#include "Particle.h"
-
-int width = 800, height = 600;
-
-ParticleGenerator* particleGenerator;
-float deltaTime = 0.016f; // Approx. 60 FPS
-
-glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  3.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
-
-void RenderParticles() {
-    particleGenerator->Render();
+    // If dotProduct < 0, the particle is inside or moving towards the object
+    return dotProduct < 0.0f;
 }
 
-void UpdateParticles(int value) {
-    particleGenerator->Update(deltaTime);
-    glutPostRedisplay();
-    glutTimerFunc(16, UpdateParticles, 0); // Call this function again after 16ms
+bool checkParticlesInside(ParticleGenerator* generator, ObjectLoader& obj) {
+    for (int i = 0; i < generator->getParticleCount(); ++i) {
+        const Particle& particle = generator->getParticle(i);
+
+        // Loop through all vertices of the object
+        for (size_t j = 0; j < obj.vertices.size(); ++j) {
+            const glm::vec3& vertex = obj.vertices[j].position;
+            const glm::vec3& normal = obj.vertices[j].normal;
+
+            if (isParticleInside(particle, vertex, normal)) {
+                return true; // A particle is inside
+            }
+        }
+    }
+    return false; // No particle is inside
 }
-
-void InitializeOpenGL() {
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Black background
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_POINT_SMOOTH);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(45.0, 1.0, 0.1, 100.0);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    gluLookAt(cameraPos.x, cameraPos.y, cameraPos.z,
-              cameraPos.x + cameraFront.x, cameraPos.y + cameraFront.y, cameraPos.z + cameraFront.z,
-              cameraUp.x, cameraUp.y, cameraUp.z);
-}
-
-int main(int argc, char** argv) {
-    particleGenerator = new ParticleGenerator(10); // 1000 particles
-
-    glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-    glutInitWindowSize(800, 600);
-    glutCreateWindow("Particle Engine");
-
-    InitializeOpenGL();
-
-    // Register callbacks
-    glutDisplayFunc(RenderParticles);
-    glutTimerFunc(16, UpdateParticles, 0);
-
-    // Start the main loop
-    glutMainLoop();
-
-    // Clean up (this will never be reached because glutMainLoop is infinite)
-    delete particleGenerator;
-
-    return 0;
-}
-
-**/
