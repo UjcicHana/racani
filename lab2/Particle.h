@@ -25,8 +25,9 @@ public:
     glm::vec3 position;
     glm::vec3 speed;
     glm::vec4 color;
+    float size;
 
-    Particle() : age(0.0f), position(0.0f), speed(0.0f), color(1.0f, 1.0f, 1.0f, 1.0f) {}
+    Particle() : age(0.0f), position(0.0f), speed(0.0f), color(1.0f, 1.0f, 1.0f, 1.0f), size(2.0f) {}
 };
 
 class ParticleGenerator {
@@ -37,8 +38,6 @@ public:
     void Update(float deltaTime);
     void Render();
     void RespawnParticle(Particle& particle);
-    int getParticleCount();
-    Particle& getParticle(int i);
 
 private:
     int N;

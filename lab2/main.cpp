@@ -7,10 +7,10 @@
 
 
 ParticleGenerator* particleGenerator;
-float deltaTime = 0.016f;
+float delta = 0.00016f;
+float passedTime = 0.0f;
 
 GLuint width = 600, height = 600;
-int kut = 0;
 
 typedef struct _Ociste {
     GLdouble	x;
@@ -18,7 +18,7 @@ typedef struct _Ociste {
     GLdouble	z;
 } Ociste;
 
-Ociste	ociste = { 0.0f, 0.0f, 2.0f };
+Ociste	ociste = { 0.0f, 0.0f, 3.0f };
 
 std::chrono::high_resolution_clock::time_point lastTime;
 
@@ -40,12 +40,8 @@ int main(int argc, char **argv)
     glutReshapeFunc(myReshape);
     glutIdleFunc(idle);
     glutKeyboardFunc(myKeyboard);
-    printf("Tipka: a/d - pomicanje ocista po x os +/-\n");
-    printf("Tipka: w/s - pomicanje ocista po y os +/-\n");
-    printf("Tipka: r - pocetno stanje\n");
-    printf("esc: izlaz iz programa\n");
 
-    particleGenerator = new ParticleGenerator(10);
+    particleGenerator = new ParticleGenerator(1000);
 
     lastTime = std::chrono::high_resolution_clock::now();
 
@@ -115,74 +111,14 @@ void idle() {
     std::chrono::duration<float> deltaTime = currentTime - lastTime;
     lastTime = currentTime;
 
-    if (particleGenerator) {
-        particleGenerator->Update(deltaTime.count());
+    passedTime += deltaTime.count();
+    if (passedTime >= delta) {
+        passedTime = 0.0f;
+
+        if (particleGenerator) {
+            particleGenerator->Update(deltaTime.count());
+        }
     }
 
     glutPostRedisplay();
 }
-
-
-/**#include <GL/glut.h>
-#include <iostream>
-
-#include "Particle.h"
-
-int width = 800, height = 600;
-
-ParticleGenerator* particleGenerator;
-float deltaTime = 0.016f; // Approx. 60 FPS
-
-glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  3.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
-
-void RenderParticles() {
-    particleGenerator->Render();
-}
-
-void UpdateParticles(int value) {
-    particleGenerator->Update(deltaTime);
-    glutPostRedisplay();
-    glutTimerFunc(16, UpdateParticles, 0); // Call this function again after 16ms
-}
-
-void InitializeOpenGL() {
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Black background
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_POINT_SMOOTH);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(45.0, 1.0, 0.1, 100.0);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    gluLookAt(cameraPos.x, cameraPos.y, cameraPos.z,
-              cameraPos.x + cameraFront.x, cameraPos.y + cameraFront.y, cameraPos.z + cameraFront.z,
-              cameraUp.x, cameraUp.y, cameraUp.z);
-}
-
-int main(int argc, char** argv) {
-    particleGenerator = new ParticleGenerator(10); // 1000 particles
-
-    glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-    glutInitWindowSize(800, 600);
-    glutCreateWindow("Particle Engine");
-
-    InitializeOpenGL();
-
-    // Register callbacks
-    glutDisplayFunc(RenderParticles);
-    glutTimerFunc(16, UpdateParticles, 0);
-
-    // Start the main loop
-    glutMainLoop();
-
-    // Clean up (this will never be reached because glutMainLoop is infinite)
-    delete particleGenerator;
-
-    return 0;
-}
-
-**/
