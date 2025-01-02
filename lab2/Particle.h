@@ -10,10 +10,10 @@
 #include <sstream>
 #include <vector>
 #include <GL/glut.h>
-#include <vec3.hpp>
-#include <geometric.hpp>
-#include <mat4x4.hpp>
-#include <gtx/string_cast.hpp>
+#include <glm/vec3.hpp>
+#include <glm/geometric.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/gtx/string_cast.hpp>
 #include <random>
 #include <chrono>
 
@@ -38,6 +38,7 @@ public:
     void Update(float deltaTime);
     void Render();
     void RespawnParticle(Particle& particle);
+    void UpdateSource(glm::vec3 source);
 
 private:
     int N;

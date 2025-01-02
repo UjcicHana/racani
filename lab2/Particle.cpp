@@ -56,11 +56,15 @@ void ParticleGenerator::Render() {
 
 }
 
+void ParticleGenerator::UpdateSource(glm::vec3 source) {
+    this->source = source;
+}
+
 void ParticleGenerator::RespawnParticle(Particle& particle) {
     particle.oldest = (0.5f + randomDist(randomEngine))*3.0f;
     particle.age = 0.0f;
     particle.position = source;
-    particle.speed = glm::vec3(randomDist(randomEngine) * 2.0f - 1.0f, randomDist(randomEngine) * 2.0f - 1.0f, 0.0f);
+    particle.speed = glm::vec3(randomDist(randomEngine) * 2.0f - 1.0f, randomDist(randomEngine) * 2.0f + 1.0f, 0.0f);
     particle.color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
     particle.size = (0.5f + randomDist(randomEngine))*2.0f;
 

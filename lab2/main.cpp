@@ -6,7 +6,8 @@
 #include "Particle.h"
 
 
-ParticleGenerator* particleGenerator;
+ParticleGenerator* particleGenerator1;
+ParticleGenerator* particleGenerator2;
 float delta = 0.00016f;
 float passedTime = 0.0f;
 
@@ -41,13 +42,15 @@ int main(int argc, char **argv)
     glutIdleFunc(idle);
     glutKeyboardFunc(myKeyboard);
 
-    particleGenerator = new ParticleGenerator(1000);
+    particleGenerator1 = new ParticleGenerator(1000);
+    particleGenerator2 = new ParticleGenerator(1000);
+    particleGenerator2->UpdateSource(glm::vec3(1.0, 0.0, 0.0));
 
     lastTime = std::chrono::high_resolution_clock::now();
 
     glutMainLoop();
 
-    delete particleGenerator;
+    delete particleGenerator1, particleGenerator1;
     return 0;
 }
 
@@ -76,7 +79,8 @@ void myReshape(int w, int h)
 void myRenderScene()
 {
     glPushMatrix();
-    particleGenerator->Render();
+    particleGenerator1->Render();
+    particleGenerator2->Render();
     glPopMatrix();
 }
 
@@ -115,8 +119,11 @@ void idle() {
     if (passedTime >= delta) {
         passedTime = 0.0f;
 
-        if (particleGenerator) {
-            particleGenerator->Update(deltaTime.count());
+        if (particleGenerator1) {
+            particleGenerator1->Update(deltaTime.count());
+        }
+        if (particleGenerator2) {
+            particleGenerator2->Update(deltaTime.count());
         }
     }
 
