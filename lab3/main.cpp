@@ -5,6 +5,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <fstream>
+#include <sstream>
 #include <iostream>
 #include <time.h>
 #include <GL/glut.h>
@@ -37,6 +39,8 @@ GLfloat tip_color[] = { 1.0,1.0,0.0, 1.0 };
 GLfloat ball_color[] = {255.0,140.5,25.0, 0.8 };
 
 Bone* root;
+Bone* root2;
+bool isSetRoot2 = false;
 
 
 void drawBones(Bone* b) {
@@ -44,7 +48,7 @@ void drawBones(Bone* b) {
     GLfloat s[] = {0};
 
     glm::mat4 previous = b->M;
-    glm::vec3 rot = glm::vec3(RAD(b->rotation.x), RAD(b->rotation.y), RAD(b->rotation.z));
+    glm::vec3 rot = glm::radians(b->rotation);
 
     if (b->parent != NULL) {
         b->M = glm::translate(b->M, glm::vec3(0.0f, 0.0f, b->parent->length));
@@ -58,6 +62,7 @@ void drawBones(Bone* b) {
         b->M = glm::rotate(b->M, rot.x, glm::vec3(1.0f, 0.0f, 0.0f));
         b->M = glm::rotate(b->M, rot.y, glm::vec3(0.0f, 1.0f, 0.0f));
         b->M = glm::rotate(b->M, rot.z, glm::vec3(0.0f, 0.0f, 1.0f));
+        b->M = glm::translate(b->M, b->coordinates);
     }
 
     glLoadMatrixf(glm::value_ptr(b->M));
@@ -138,7 +143,7 @@ void myDisplay()
     glMaterialfv(GL_FRONT, GL_EMISSION, ball_color);
     ball_color[3] = 1.0;
     glLoadMatrixf(glm::value_ptr(glm::translate(M*V, target)));
-    glutSolidSphere(0.3f, 32, 32);
+    glutSolidSphere(0.1f, 32, 32);
     glPopMatrix();
 
     GLfloat t[] = { 0.0,0.0, 0.0,1.0 };
@@ -157,6 +162,12 @@ void myDisplay()
 
 
     drawBones(root);
+
+    if(isSetRoot2) {
+        root2->M = glm::rotate(M*V, -90.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+        root2->setRotate(root2->rotation.x, root2->rotation.y, root2->rotation.z);
+        drawBones(root2);
+    }
 
     glutSwapBuffers();
 }
@@ -225,6 +236,10 @@ void keyDown(unsigned char c, int x, int y) {
             case 'd':
                 target.x += 0.2;
                 break;
+            case 13:
+                ccd::findNewAngles(root->getEndEffector(), target);
+                if (isSetRoot2) ccd::findNewAngles(root2->getEndEffector(), target);
+                break;
         }
     }
     catch (ConstraintException* e) {
@@ -233,37 +248,19 @@ void keyDown(unsigned char c, int x, int y) {
 }
 
 void specKeyDown(int c, int x, int y) {
-    if (glutGetModifiers() == GLUT_ACTIVE_SHIFT) {
-        switch (c) {
-            case GLUT_KEY_LEFT:
-                cdx -= 0.25;
-                break;
-            case GLUT_KEY_RIGHT:
-                cdx += 0.25;
-                break;
-            case GLUT_KEY_UP:
-                cdy -= 0.25;
-                break;
-            case GLUT_KEY_DOWN:
-                cdy += 0.25;
-                break;
-        }
-    }
-    else {
-        switch (c) {
-            case GLUT_KEY_LEFT:
-                speed_y = 60;
-                break;
-            case GLUT_KEY_RIGHT:
-                speed_y = -60;
-                break;
-            case GLUT_KEY_UP:
-                speed_x = 60;
-                break;
-            case GLUT_KEY_DOWN:
-                speed_x = -60;
-                break;
-        }
+    switch (c) {
+        case GLUT_KEY_LEFT:
+            cdx -= 0.25;
+            break;
+        case GLUT_KEY_RIGHT:
+            cdx += 0.25;
+            break;
+        case GLUT_KEY_UP:
+            cdy -= 0.25;
+            break;
+        case GLUT_KEY_DOWN:
+            cdy += 0.25;
+            break;
     }
 }
 
@@ -312,11 +309,23 @@ int main(int argc, char **argv)
             ->add(new Bone(2.5f))->rotate(0, 90, 0)
             ->add(new Bone(1.2f))->rotate(0, 90, 0);
 
-    printf("End effector length %f\n", root->getEndEffector()->length);
+    root->setCoordinates(glm::vec3(1.0, 0.0, 0.0));
+
+    //printf("End effector length %f\n", root->getEndEffector()->length);
 
     root->print();
 
-    ccd::findNewAngles(root->getEndEffector(), target);
+    root2 = new Bone(0.0f);
+    isSetRoot2 = true;
+
+    root2->add(new Bone(1))
+            ->add(new Bone(3))->rotate(90, 0, 0)
+            ->add(new Bone(1.5f))->rotate(0, 90, 0)
+            ->add(new Bone(1))->rotate(0, 90, 0);
+
+    root2->setCoordinates(glm::vec3(-1.0, 0.0, 0.0));
+
+    root2->print();
 
 
     glutMainLoop();

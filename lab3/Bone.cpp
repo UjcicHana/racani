@@ -77,6 +77,7 @@ glm::mat4 Bone::getTransform() {
         //std::cout << "Apply parent rotations" << glm::to_string(P) << std::endl;
     } else {
         P = glm::rotate(P, 90.0f, glm::vec3(-1.0f, 0.0f, 0.0f));
+        P = glm::translate(P, coordinates);
         //std::cout << "Apply rotations in else" << glm::to_string(P) << std::endl;
     }
 
@@ -158,5 +159,9 @@ Bone* Bone::getEndEffector() {
 
 
     return endEffector;
+}
+
+void Bone::setCoordinates(glm::vec3 translation) {
+    coordinates = translation;
 }
 

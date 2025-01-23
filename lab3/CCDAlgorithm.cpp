@@ -55,9 +55,9 @@ void ccd::findNewAngles(Bone *end, glm::vec3 target, int iterations) {
         }
     }
 
-    // Debug final position
-    glm::vec3 endEffectorPos = glm::vec3(end->getEndPosition());
+
+    /*glm::vec3 endEffectorPos = glm::vec3(end->getEndPosition());
     printf("Final end effector position: (%f, %f, %f)\n", endEffectorPos.x, endEffectorPos.y, endEffectorPos.z);
-    printf("Target position: (%f, %f, %f)\n", target.x, target.y, target.z);
+    printf("Target position: (%f, %f, %f)\n", target.x, target.y, target.z);*/
 
 }

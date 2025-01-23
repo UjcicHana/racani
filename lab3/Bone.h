@@ -21,8 +21,8 @@ public:
     float length;
     glm::mat4  M;
     glm::vec3 rotation;
-private:
     glm::vec3 coordinates;
+private:
     glm::vec3 constraint[2];
 public:
     Bone(float l);
@@ -39,6 +39,7 @@ public:
     glm::mat4 getTransform();
     void print();
     Bone* getEndEffector();
+    void setCoordinates(glm::vec3 translation);
 
     ~Bone();
 
