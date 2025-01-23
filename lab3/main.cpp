@@ -4,114 +4,349 @@
 
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
+#include <iostream>
+#include <time.h>
 #include <GL/glut.h>
+#include <GL/freeglut.h>
+#include <glm/glm.hpp>
+#include <glm/gtx/string_cast.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "Chain.h"
+#include "Bone.h"
+#include "CCDAlgorithm.h"
 
-Chain *chain;
+#define WIDTH 600
+#define HEIGHT 600
 
-std::vector<glm::vec3> joints = {glm::vec3(0.0f, 0.0f, 0.0f),
-                                 glm::vec3(1.0f, 0.0f, 0.0f),
-                                 glm::vec3(1.5f, 1.0f, 0.0f)};
+glm::vec3 target = {1.0f, 3.0f, 5.0f};
+float speed_x = 0;
+float speed_y = 0;
+int lastTime = 0;
+float angle_x = -40;
+float angle_y = 0;
+float zoom = 40.0f;
+float cdx, cdy;
 
-GLuint width = 600, height = 600;
+GLfloat pod_color[] = { 0.0, 0.0, 0.0, 0.8 };
+GLfloat bone_color[] = { 0.0, 0.0, 1.0, 1.0 };
+GLfloat joint_color[] = {1.0, 0.0, 0.0, 1.0 };
+GLfloat tip_color[] = { 1.0,1.0,0.0, 1.0 };
+GLfloat ball_color[] = {255.0,140.5,25.0, 0.8 };
 
-typedef struct _Ociste {
-    GLdouble	x;
-    GLdouble	y;
-    GLdouble	z;
-} Ociste;
-
-Ociste	ociste = { 0.0f, 0.0f, 3.0f };
-
-void myDisplay();
-void myReshape(int width, int height);
-void myRenderScene();
-void idle();
-void myKeyboard(unsigned char theKey, int mouseX, int mouseY);
-
-int main(int argc, char **argv)
-{
-
-    glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE);
-    glutInitWindowSize(width, height);
-    glutInitWindowPosition(0, 0);
-    glutCreateWindow("Particle engine");
-    glutDisplayFunc(myDisplay);
-    glutReshapeFunc(myReshape);
-    glutIdleFunc(idle);
-    glutKeyboardFunc(myKeyboard);
+Bone* root;
 
 
+void drawBones(Bone* b) {
+    glPushMatrix();
+    GLfloat s[] = {0};
 
-    chain = new Chain(joints);
+    glm::mat4 previous = b->M;
+    glm::vec3 rot = glm::vec3(RAD(b->rotation.x), RAD(b->rotation.y), RAD(b->rotation.z));
 
-    glutMainLoop();
+    if (b->parent != NULL) {
+        b->M = glm::translate(b->M, glm::vec3(0.0f, 0.0f, b->parent->length));
 
-    return 0;
+        b->M = glm::rotate(b->M, rot.x, glm::vec3(b->M * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f)));
+        b->M = glm::rotate(b->M, rot.y, glm::vec3(b->M * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f)));
+        b->M = glm::rotate(b->M, rot.z, glm::vec3(b->M * glm::vec4(0.0f, 0.0f, 1.0f, 0.0f)));
+
+        b->M = b->parent->M * b->M;
+    } else {
+        b->M = glm::rotate(b->M, rot.x, glm::vec3(1.0f, 0.0f, 0.0f));
+        b->M = glm::rotate(b->M, rot.y, glm::vec3(0.0f, 1.0f, 0.0f));
+        b->M = glm::rotate(b->M, rot.z, glm::vec3(0.0f, 0.0f, 1.0f));
+    }
+
+    glLoadMatrixf(glm::value_ptr(b->M));
+
+    if (b->parent != NULL) {
+        s[0] = 250;
+        glMaterialfv(GL_FRONT, GL_SPECULAR, joint_color);
+        glMaterialfv(GL_FRONT, GL_DIFFUSE, joint_color);
+        glMaterialfv(GL_FRONT, GL_SHININESS, s);
+        glutSolidSphere(0.2f, 32, 32);
+    }
+
+    glMaterialfv(GL_FRONT, GL_SPECULAR, bone_color);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, bone_color);
+    s[0] = 11;
+    glMaterialfv(GL_FRONT, GL_SHININESS, s);
+
+    GLUquadricObj* q = gluNewQuadric();
+    if (b->bones.empty())
+        gluCylinder(q, 0.1f, 0.1f, b->length - 0.5f, 32, 32);
+    else
+        gluCylinder(q, 0.1f, 0.1f, b->length, 32, 32);
+    gluDeleteQuadric(q);
+
+    glPopMatrix();
+
+    if (b->bones.empty()) {
+        glPushMatrix();
+
+        glLoadMatrixf(glm::value_ptr(glm::translate(b->M, glm::vec3(0.0f, 0.0f, b->length - 0.5f))));
+        glMaterialfv(GL_FRONT, GL_SPECULAR, tip_color);
+        glMaterialfv(GL_FRONT, GL_DIFFUSE, tip_color);
+        s[0] = 250;
+        glMaterialfv(GL_FRONT, GL_SHININESS, s);
+
+        gluCylinder(q, 0.2f, 0.0f, 0.5f, 32, 32);
+
+        glPopMatrix();
+    }
+
+    for (std::vector<Bone*>::iterator it = b->bones.begin(); it != b->bones.end(); it++) {
+        drawBones(*it);
+    }
+
+    b->M = previous;
+
+
 }
 
 void myDisplay()
 {
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    myRenderScene();
+    glClearColor(0, 0, 0, 1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glm::vec3 cameraCenter = glm::vec3(0.0f + cdx, 0.0f + cdy, 0.0);
+    glm::vec3 cameraEye = glm::vec3(0.0f, 5.0f, -zoom);
+    glm::vec3 cameraNose = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::mat4 V = glm::lookAt(cameraEye, cameraCenter, cameraNose);
+    V = glm::rotate(V, angle_x, glm::vec3(1.0f, 0.0f, 0.0f));
+    V = glm::rotate(V, angle_y, glm::vec3(0.0f, 1.0f, 0.0f));
+
+    glm::mat4 P = glm::perspective(50.0f, 1.0f, 1.0f, 50.0f);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadMatrixf(glm::value_ptr(P));
+    glMatrixMode(GL_MODELVIEW);
+
+
+    glm::mat4 M = glm::mat4(1.0f);
+    glLoadMatrixf(glm::value_ptr(V*M));
+
+    GLfloat s[] = { 128 };
+    glPushMatrix();
+    glMaterialfv(GL_FRONT, GL_SPECULAR, ball_color);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, ball_color);
+    glMaterialfv(GL_FRONT, GL_SHININESS, s);
+    ball_color[3] = 0.5;
+    glMaterialfv(GL_FRONT, GL_EMISSION, ball_color);
+    ball_color[3] = 1.0;
+    glLoadMatrixf(glm::value_ptr(glm::translate(M*V, target)));
+    glutSolidSphere(0.3f, 32, 32);
+    glPopMatrix();
+
+    GLfloat t[] = { 0.0,0.0, 0.0,1.0 };
+    glPushMatrix();
+    glMaterialfv(GL_FRONT, GL_SPECULAR, pod_color);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, pod_color);
+    s[0] = 0;
+    glMaterialfv(GL_FRONT, GL_SHININESS, s);
+    glMaterialfv(GL_FRONT, GL_EMISSION, t);
+    glScalef(5.9f, 0.1f, 5.9f);
+    glutSolidCube(1.0f);
+    glPopMatrix();
+
+    root->M = glm::rotate(M*V, -90.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+    root->setRotate(root->rotation.x, root->rotation.y, root->rotation.z);
+
+
+    drawBones(root);
+
     glutSwapBuffers();
 }
 
-void myReshape(int w, int h)
+void nextFrame(void) {
+    int actTime = glutGet(GLUT_ELAPSED_TIME);
+    float interval = actTime - lastTime;
+    lastTime = actTime;
+    angle_x += speed_x*interval / 700.0;
+    angle_y += speed_y*interval / 700.0;
+
+    if (angle_x>360) angle_x -= 360;
+    if (angle_x>360) angle_x += 360;
+    if (angle_y>360) angle_y -= 360;
+    if (angle_y>360) angle_y += 360;
+
+    glutPostRedisplay();
+}
+
+void myReshape(int width, int height)
 {
-    width = w; height = h;
-    //glDisable(GL_DEPTH_TEST);
+    // Prevent divide by zero
+    if (height == 0) height = 1;
+
+    // Set the viewport to cover the new window dimensions
+    glViewport(0, 0, width, height);
+
+    // Calculate aspect ratio
+    float aspect = static_cast<float>(width) / static_cast<float>(height);
+
+    // Update the projection matrix to maintain proper aspect ratio
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    //glOrtho(-1, 1, -1, 1, 1, 5);
-    glFrustum(-1, 1, -1, 1, 1, 5);
-    glViewport(0, 0, (GLsizei)width, (GLsizei)height);
+    glm::mat4 P = glm::perspective(50.0f, aspect, 1.0f, 50.0f);
+    glLoadMatrixf(glm::value_ptr(P));
+
+    // Switch back to the model-view matrix
     glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    gluLookAt(ociste.x, ociste.y, ociste.z, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);	// ociste x,y,z; glediste x,y,z; up vektor x,y,z
 }
 
-void myRenderScene()
-{
-    glPushMatrix();
-    chain->draw();
-
-
-    glPopMatrix();
-}
-
-void myKeyboard(unsigned char theKey, int mouseX, int mouseY)
-{
-    switch (theKey)
-    {
-        case 'a': ociste.x = ociste.x+0.2f;
-            break;
-        case 'd': ociste.x = ociste.x-0.2f;
-            break;
-        case 'w': ociste.y = ociste.y + 0.2f;
-            break;
-        case 's': ociste.y = ociste.y - 0.2f;
-            break;
-        case 'r': ociste.x = 0.0; ociste.y = 0.0, ociste.z = 0.0;
-            break;
-        case 'q': ociste.z = ociste.z+0.2f;
-            break;
-        case 'e': ociste.z = ociste.z-0.2f;
-            break;
-        case 27:  exit(0);
-            break;
+void keyDown(unsigned char c, int x, int y) {
+    try {
+        switch (c) {
+            case '-':
+                zoom += 0.5f;
+                break;
+            case '=':
+            case '+':
+                zoom -= 0.5f;
+                break;
+            case 'q':
+                target.z -= 0.2f;
+                break;
+            case 'e':
+                target.z += 0.2f;
+                break;
+            case 'w':
+                target.y += 0.2;
+                break;
+            case 's':
+                target.y -= 0.2;
+                break;
+            case 'a':
+                target.x -= 0.2;
+                break;
+            case 'd':
+                target.x += 0.2;
+                break;
+        }
     }
-
-    myReshape(width, height);
-    glutPostRedisplay();
+    catch (ConstraintException* e) {
+        printf("Cannot move further!\n");
+    }
 }
 
-void idle() {
+void specKeyDown(int c, int x, int y) {
+    if (glutGetModifiers() == GLUT_ACTIVE_SHIFT) {
+        switch (c) {
+            case GLUT_KEY_LEFT:
+                cdx -= 0.25;
+                break;
+            case GLUT_KEY_RIGHT:
+                cdx += 0.25;
+                break;
+            case GLUT_KEY_UP:
+                cdy -= 0.25;
+                break;
+            case GLUT_KEY_DOWN:
+                cdy += 0.25;
+                break;
+        }
+    }
+    else {
+        switch (c) {
+            case GLUT_KEY_LEFT:
+                speed_y = 60;
+                break;
+            case GLUT_KEY_RIGHT:
+                speed_y = -60;
+                break;
+            case GLUT_KEY_UP:
+                speed_x = 60;
+                break;
+            case GLUT_KEY_DOWN:
+                speed_x = -60;
+                break;
+        }
+    }
+}
 
-    glutPostRedisplay();
+void mouseClick(int button, int state, int x, int y)
+{
+    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+        float ndcX = (2.0f * x) / glutGet(GLUT_WINDOW_WIDTH) - 1.0f;
+        float ndcY = 1.0f - (2.0f * y) / glutGet(GLUT_WINDOW_HEIGHT);
+
+        // Assume z is 0 since we're mapping to a flat plane
+        float z = 0.0f;
+
+        // Invert the perspective projection and view matrices to get world coordinates
+        glm::vec4 clipCoords = glm::vec4(ndcX, ndcY, z, 1.0f);
+        glm::mat4 P = glm::perspective(50.0f, 1.0f, 1.0f, 50.0f);
+        glm::mat4 V = glm::lookAt(
+                glm::vec3(0.0f, 1.0f, -zoom),             // Eye position
+                glm::vec3(0.0f + cdx, 2.0f + cdy, 0.0f), // Look-at center
+                glm::vec3(0.0f, 1.0f, 0.0f)              // Up direction
+        );
+        glm::mat4 invVP = glm::inverse(P * V);
+
+        // Convert from clip coordinates to world coordinates
+        glm::vec4 worldCoords = invVP * clipCoords;
+        worldCoords /= worldCoords.w; // Normalize homogeneous coordinates
+
+        printf("World coords: %i %i\n", worldCoords.x, worldCoords.y);
+    }
+}
+
+
+int main(int argc, char **argv)
+{
+    srand(time(0));
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+    glutInitWindowSize(WIDTH, HEIGHT);
+    glutInitWindowPosition(50, 50);
+    glutCreateWindow("Inverse Kinematics - Mechanical Chain");
+    glutDisplayFunc(myDisplay);
+    glutReshapeFunc(myReshape);
+    glutIdleFunc(nextFrame);
+
+    glutSpecialFunc(specKeyDown);
+    glutKeyboardFunc(keyDown);
+    //glutMouseFunc(mouseClick);
+
+    glShadeModel(GL_SMOOTH);
+
+    GLfloat light_ambient[] = { 0.1, 0.1, 0.1, 1.0 };
+    GLfloat light_position[] = { 1.0, 0.0, 0.0, 1.0 };
+    GLfloat light_diffuse[] = { 0.5, 0.5, 0.5, 1.0 };
+    GLfloat light_specular[] = { 0.5, 0.5, 0.5, 1.0 };
+
+
+    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
+
+
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_LIGHT1);
+
+    glEnable(GL_DEPTH_TEST);
+
+    root = new Bone(0.0f);
+
+    root->add(new Bone(3))
+            ->add(new Bone(2))->rotate(0, 90, 0)
+            ->add(new Bone(2.5f))->rotate(0, 90, 0)
+            ->add(new Bone(1.2f))->rotate(0, 90, 0);
+
+    printf("End effector length %f\n", root->getEndEffector()->length);
+
+    root->print();
+
+    ccd::findNewAngles(root->getEndEffector(), target, 2);
+
+
+    glutMainLoop();
+
+    delete root;
+
+    return 0;
 }
