@@ -5,7 +5,6 @@
 #ifndef RACANI_BONE_H
 #define RACANI_BONE_H
 
-#include "helper.h"
 #include <vector>
 #include <algorithm>
 #include <iostream>

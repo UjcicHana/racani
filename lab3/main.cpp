@@ -4,6 +4,7 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <iostream>
 #include <time.h>
 #include <GL/glut.h>
@@ -20,7 +21,7 @@
 #define WIDTH 600
 #define HEIGHT 600
 
-glm::vec3 target = {1.0f, 3.0f, 5.0f};
+glm::vec3 target;
 float speed_x = 0;
 float speed_y = 0;
 int lastTime = 0;
@@ -66,7 +67,7 @@ void drawBones(Bone* b) {
         glMaterialfv(GL_FRONT, GL_SPECULAR, joint_color);
         glMaterialfv(GL_FRONT, GL_DIFFUSE, joint_color);
         glMaterialfv(GL_FRONT, GL_SHININESS, s);
-        glutSolidSphere(0.2f, 32, 32);
+        glutSolidSphere(0.1f, 32, 32);
     }
 
     glMaterialfv(GL_FRONT, GL_SPECULAR, bone_color);
@@ -111,8 +112,8 @@ void myDisplay()
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glm::vec3 cameraCenter = glm::vec3(0.0f + cdx, 0.0f + cdy, 0.0);
     glm::vec3 cameraEye = glm::vec3(0.0f, 5.0f, -zoom);
+    glm::vec3 cameraCenter = glm::vec3(0.0f + cdx, 0.0f + cdy, 0.0);
     glm::vec3 cameraNose = glm::vec3(0.0f, 1.0f, 0.0f);
     glm::mat4 V = glm::lookAt(cameraEye, cameraCenter, cameraNose);
     V = glm::rotate(V, angle_x, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -266,36 +267,11 @@ void specKeyDown(int c, int x, int y) {
     }
 }
 
-void mouseClick(int button, int state, int x, int y)
-{
-    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-        float ndcX = (2.0f * x) / glutGet(GLUT_WINDOW_WIDTH) - 1.0f;
-        float ndcY = 1.0f - (2.0f * y) / glutGet(GLUT_WINDOW_HEIGHT);
-
-        // Assume z is 0 since we're mapping to a flat plane
-        float z = 0.0f;
-
-        // Invert the perspective projection and view matrices to get world coordinates
-        glm::vec4 clipCoords = glm::vec4(ndcX, ndcY, z, 1.0f);
-        glm::mat4 P = glm::perspective(50.0f, 1.0f, 1.0f, 50.0f);
-        glm::mat4 V = glm::lookAt(
-                glm::vec3(0.0f, 1.0f, -zoom),             // Eye position
-                glm::vec3(0.0f + cdx, 2.0f + cdy, 0.0f), // Look-at center
-                glm::vec3(0.0f, 1.0f, 0.0f)              // Up direction
-        );
-        glm::mat4 invVP = glm::inverse(P * V);
-
-        // Convert from clip coordinates to world coordinates
-        glm::vec4 worldCoords = invVP * clipCoords;
-        worldCoords /= worldCoords.w; // Normalize homogeneous coordinates
-
-        printf("World coords: %i %i\n", worldCoords.x, worldCoords.y);
-    }
-}
-
 
 int main(int argc, char **argv)
 {
+    target = glm::vec3(atof(argv[1]), atof(argv[2]), atof(argv[3]));
+
     srand(time(0));
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
@@ -308,7 +284,6 @@ int main(int argc, char **argv)
 
     glutSpecialFunc(specKeyDown);
     glutKeyboardFunc(keyDown);
-    //glutMouseFunc(mouseClick);
 
     glShadeModel(GL_SMOOTH);
 
@@ -341,7 +316,7 @@ int main(int argc, char **argv)
 
     root->print();
 
-    ccd::findNewAngles(root->getEndEffector(), target, 2);
+    ccd::findNewAngles(root->getEndEffector(), target);
 
 
     glutMainLoop();

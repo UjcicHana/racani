@@ -62,11 +62,9 @@ glm::mat4 Bone::getTransform() {
 
     if (parent != NULL) {
         P = glm::translate(P, glm::vec3(0.0f, 0.0f, parent->length));
-        //std::cout << "Translate by length" << glm::to_string(P) << std::endl;
 
 
-        glm::vec3 rot = glm::vec3(RAD(rotation.x), RAD(rotation.y), RAD(rotation.z));
-        //std::cout << "Rotation" << glm::to_string(rot) << std::endl;
+        glm::vec3 rot = glm::radians(rotation);
 
 
 
@@ -74,7 +72,6 @@ glm::mat4 Bone::getTransform() {
         P = glm::rotate(P, rot.y, glm::vec3(P*glm::vec4(0.0f, 1.0f, 0.0f, 0.0f)));
         P = glm::rotate(P, rot.z, glm::vec3(P*glm::vec4(0.0f, 0.0f, 1.0f, 0.0f)));
 
-        //std::cout << "Apply rotations" << glm::to_string(P) << std::endl;
 
         P = parent->getTransform() * P;
         //std::cout << "Apply parent rotations" << glm::to_string(P) << std::endl;
