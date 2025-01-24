@@ -23,7 +23,7 @@
 #define WIDTH 600
 #define HEIGHT 600
 
-glm::vec3 target;
+glm::vec3 target = glm::vec3(0.0, 4.0, 0.0);
 float speed_x = 0;
 float speed_y = 0;
 int lastTime = 0;
@@ -41,6 +41,66 @@ GLfloat ball_color[] = {255.0,140.5,25.0, 0.8 };
 Bone* root;
 Bone* root2;
 bool isSetRoot2 = false;
+
+Bone* loadChain(const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open file " << filename << std::endl;
+        return nullptr;
+    }
+
+    std::string line;
+    Bone* rootToLoad;
+    Bone* currentBone = nullptr;
+    Bone* temp = nullptr;
+
+    while (std::getline(file, line)) {
+        std::istringstream iss(line);
+        std::string command;
+
+        iss >> command;
+
+        if (command == "b") {
+            float length;
+            iss >> length;
+            rootToLoad = new Bone(length);
+            currentBone = rootToLoad;
+        } else if (command == "a") {
+            float length;
+            iss >> length;
+
+            if (currentBone != nullptr) {
+                temp = new Bone(length);
+                currentBone->add(temp);
+                currentBone = temp;
+            } else {
+                std::cerr << "Error: Add command before root is initialized." << std::endl;
+            }
+        } else if (command == "r") {
+            float x, y, z;
+            iss >> x >> y >> z;
+
+            if (currentBone != nullptr) {
+                currentBone->rotate(x, y, z);
+            } else {
+                std::cerr << "Error: Rotate command before root is initialized." << std::endl;
+            }
+        } else if (command == "t") {
+            float x, y, z;
+            iss >> x >> y >> z;
+
+            if (rootToLoad != nullptr) {
+                rootToLoad->setCoordinates(glm::vec3(x, y, z));
+            } else {
+                std::cerr << "Error: Translate command before root is initialized." << std::endl;
+            }
+        } else {
+            std::cerr << "Error: Unknown command '" << command << "' in file." << std::endl;
+        }
+    }
+    file.close();
+    return rootToLoad;
+}
 
 
 void drawBones(Bone* b) {
@@ -189,22 +249,17 @@ void nextFrame(void) {
 
 void myReshape(int width, int height)
 {
-    // Prevent divide by zero
     if (height == 0) height = 1;
 
-    // Set the viewport to cover the new window dimensions
     glViewport(0, 0, width, height);
 
-    // Calculate aspect ratio
     float aspect = static_cast<float>(width) / static_cast<float>(height);
 
-    // Update the projection matrix to maintain proper aspect ratio
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glm::mat4 P = glm::perspective(50.0f, aspect, 1.0f, 50.0f);
     glLoadMatrixf(glm::value_ptr(P));
 
-    // Switch back to the model-view matrix
     glMatrixMode(GL_MODELVIEW);
 }
 
@@ -237,6 +292,7 @@ void keyDown(unsigned char c, int x, int y) {
                 target.x += 0.2;
                 break;
             case 13:
+                printf("Target at: (%f, %f, %f)\n", target.x, target.y, target.z);
                 ccd::findNewAngles(root->getEndEffector(), target);
                 if (isSetRoot2) ccd::findNewAngles(root2->getEndEffector(), target);
                 break;
@@ -267,13 +323,22 @@ void specKeyDown(int c, int x, int y) {
 
 int main(int argc, char **argv)
 {
-    target = glm::vec3(atof(argv[1]), atof(argv[2]), atof(argv[3]));
+    if (argc < 2) {
+        std::cerr << "Not enough arguments!" << std::endl;
+        return 0;
+    }
+    std::string f1 = argv[1], f2;
+    if (argc >= 3) {
+        isSetRoot2 = true;
+        f2 = argv[2];
+    }
+
 
     srand(time(0));
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowSize(WIDTH, HEIGHT);
-    glutInitWindowPosition(50, 50);
+    glutInitWindowPosition(400, 50);
     glutCreateWindow("Inverse Kinematics - Mechanical Chain");
     glutDisplayFunc(myDisplay);
     glutReshapeFunc(myReshape);
@@ -302,30 +367,13 @@ int main(int argc, char **argv)
 
     glEnable(GL_DEPTH_TEST);
 
-    root = new Bone(0.0f);
-
-    root->add(new Bone(3))
-            ->add(new Bone(2))->rotate(0, 90, 0)
-            ->add(new Bone(2.5f))->rotate(0, 90, 0)
-            ->add(new Bone(1.2f))->rotate(0, 90, 0);
-
-    root->setCoordinates(glm::vec3(1.0, 0.0, 0.0));
-
-    //printf("End effector length %f\n", root->getEndEffector()->length);
+    root = loadChain(f1);
 
     root->print();
-
-    root2 = new Bone(0.0f);
-    isSetRoot2 = true;
-
-    root2->add(new Bone(1))
-            ->add(new Bone(3))->rotate(90, 0, 0)
-            ->add(new Bone(1.5f))->rotate(0, 90, 0)
-            ->add(new Bone(1))->rotate(0, 90, 0);
-
-    root2->setCoordinates(glm::vec3(-1.0, 0.0, 0.0));
-
-    root2->print();
+    if (isSetRoot2) {
+        root2 = loadChain(f2);
+        root2->print();
+    }
 
 
     glutMainLoop();

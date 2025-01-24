@@ -15,7 +15,6 @@
 
 namespace ccd {
     void findNewAngles(Bone *end, glm::vec3 target, int iterations=1000);
-    bool moveOneBone(Bone *b, glm::vec3 target);
 }
 
 
