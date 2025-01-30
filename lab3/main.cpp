@@ -85,6 +85,15 @@ Bone* loadChain(const std::string& filename) {
             } else {
                 std::cerr << "Error: Rotate command before root is initialized." << std::endl;
             }
+        } else if (command == "c") {
+            float minx, miny, minz, maxx, maxy, maxz;
+            iss >> minx >> maxx >> miny >> maxy >> minz >> maxz;
+
+            if (currentBone != nullptr) {
+                currentBone->constraints(minx, maxx, miny, maxy, minz, maxz);
+            } else {
+                std::cerr << "Error: Constraints command before root is initialized." << std::endl;
+            }
         } else if (command == "t") {
             float x, y, z;
             iss >> x >> y >> z;

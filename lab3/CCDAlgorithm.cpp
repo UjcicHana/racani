@@ -22,10 +22,8 @@ void ccd::findNewAngles(Bone *end, glm::vec3 target, int iterations) {
             glm::vec3 toTarget = glm::normalize(glm::vec3(target - glm::vec3(startPosition)));
             glm::vec3 toEnd = glm::normalize(glm::vec3(glm::vec3(endPosition) - glm::vec3(startPosition)));
 
-            /*std::cout << "Bone start: " << glm::to_string(startPosition)
-                      << " end: " << glm::to_string(endPosition) << std::endl;
-            std::cout << "To target: " << glm::to_string(toTarget)
-                      << " To end: " << glm::to_string(toEnd) << std::endl;*/
+            /*std::cout << "Bone start: " << glm::to_string(startPosition) << " end: " << glm::to_string(endPosition) << std::endl;
+            std::cout << "To target: " << glm::to_string(toTarget) << " To end: " << glm::to_string(toEnd) << std::endl;*/
 
             float cosine = glm::dot(toEnd, toTarget);
 
