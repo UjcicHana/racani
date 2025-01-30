@@ -72,7 +72,6 @@ glm::mat4 Bone::getTransform() {
         P = glm::rotate(P, rot.y, glm::vec3(P*glm::vec4(0.0f, 1.0f, 0.0f, 0.0f)));
         P = glm::rotate(P, rot.z, glm::vec3(P*glm::vec4(0.0f, 0.0f, 1.0f, 0.0f)));
 
-
         P = parent->getTransform() * P;
         //std::cout << "Apply parent rotations" << glm::to_string(P) << std::endl;
     } else {

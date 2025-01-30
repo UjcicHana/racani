@@ -283,10 +283,10 @@ void keyDown(unsigned char c, int x, int y) {
                 zoom -= 0.5f;
                 break;
             case 'q':
-                target.z -= 0.2f;
+                target.z += 0.2f;
                 break;
             case 'e':
-                target.z += 0.2f;
+                target.z -= 0.2f;
                 break;
             case 'w':
                 target.y += 0.2;
@@ -295,10 +295,10 @@ void keyDown(unsigned char c, int x, int y) {
                 target.y -= 0.2;
                 break;
             case 'a':
-                target.x -= 0.2;
+                target.x += 0.2;
                 break;
             case 'd':
-                target.x += 0.2;
+                target.x -= 0.2;
                 break;
             case 13:
                 printf("Target at: (%f, %f, %f)\n", target.x, target.y, target.z);
